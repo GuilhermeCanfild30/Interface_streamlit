@@ -77,6 +77,8 @@ if 'param_carga' not in st.session_state:
 if 'lig_del' not in st.session_state:
     st.session_state.lig_del = False
 
+if 'set_time' not in st.session_state:
+    st.session_state.set_time = None
 
 #Acelerar processamento de dados do arquivo, evitando demora frequente sempre que recarregar a página.
 #Esse arquivo .csv será alterado de acordo com o botão pressionado, gerando os dados para os gráficos e informações de acordo com o solicitado (de acordo com a função/aplicação).
@@ -349,12 +351,16 @@ div.stSlider > div > div > div > div > div {
 
 
 ####### Menu lateral #######
-st.sidebar.image("aplicativo/Imagens e videos/simbol_ifsc.jpeg", width=80)
-#st.sidebar.markdown('# Menu')
-st.sidebar.markdown("<h2 style='font-size:40px; color: black'>Menu</h2>", unsafe_allow_html=True)
+st.sidebar.image("aplicativo/Imagens e videos/simbol_ifsc.jpeg", width=60)
+st.sidebar.markdown("""
+                <div style="font-size: 30px; font-weight: bold; color: black; margin-bottom: 10px; margin-top: -5px; background-color: #;">
+                    Menu
+                </div>""",    
+                unsafe_allow_html=True)
 
 # Definição das página
-pagina = st.sidebar.radio('Interface Interativa:',['Monitoramento e Análise', 'Ambiente de Simulação'], key="ID1")
+# pagina = st.sidebar.radio('Interface Interativa:',['Monitoramento e Análise', 'Ambiente de Simulação'], key="ID1")
+pagina = 'Monitoramento e Análise'
 
 # Espaço reservado para os dados
 dados_placeholder = st.sidebar.empty()
@@ -575,27 +581,90 @@ elif pagina == 'Monitoramento e Análise':
 # Certifique-se de que a coluna 'Timestamp' está no formato datetime
     dados['Tempo'] = pd.to_datetime(dados['Tempo'], errors='coerce')
 
-# Apresentação dos dados e análises
-    coln1, coln2, coln3 = st.columns(spec=[0.6,0.3,1.2])
-    # Criar um DataFrame com os dados armazenados
-    dados_armazenados = pd.DataFrame({
-        'tempo': tempos,
-        'fluxo': fluxos,
-        'rpm': rpms,
-        'corrente': correntes,
-        'tensao': tensoes
-    })
+    # Filtro de datas
+    data_min = dados['Tempo'].min()
+    data_max = dados['Tempo'].max()
 
-    with coln1:         # Criação do gráfico de Fluxo com Altair
-        chart = alt.Chart(dados).mark_line().encode(
+    # Widget para selecionar o intervalo de datas
+    st.session_state.set_time = st.sidebar.date_input(
+        "Selecione o intervalo de tempo dos dados",
+        [data_min, data_max],
+        min_value=data_min.date(),
+        max_value=data_max.date(),
+    )
+
+    # Filtrar os dados com base no intervalo de tempo
+    if len(st.session_state.set_time) == 2:
+        inicio, fim = st.session_state.set_time
+        inicio = pd.to_datetime(inicio)  # Converter para datetime
+        fim = pd.to_datetime(fim) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)  # Incluir o fim do dia
+        dados_filtrados = dados[(dados['Tempo'] >= pd.to_datetime(inicio)) & (dados['Tempo'] <= pd.to_datetime(fim))]
+    else:
+        dados_filtrados = dados
+
+
+# Apresentação dos dados e análises
+    coln1, coln2, coln3 = st.columns(spec=[1,0.2,1.2])
+
+    with coln1:     # Criação dos gráficos com biblioteca Altair
+
+        # Criação do gráfico de Tensão
+        chart = alt.Chart(dados_filtrados).mark_line().encode(
+            x='Tempo',
+            y='Tensao',
+            color=alt.value('green'),  # Define a cor da linha como verde
+            tooltip=['Tempo:T', 'RPM:Q']  # Adiciona informações no tooltip
+        ).properties(
+            title='Tensão x Tempo',
+            width=700,  # Largura do gráfico
+            height=200,  # Altura do gráfico
+            background='#f0f0f0'  # Cor de fundo do gráfico
+        ).configure_axis(
+            labelColor='black',  # Cor dos números (valores dos eixos)
+            titleColor='blue'    # Cor dos títulos dos eixos
+        ).configure_title(
+            fontSize=20,
+            color='black',  # Cor do título do gráfico
+            anchor='start',  # Alinhamento do título (esquerda)
+            font='Verdana'
+        )
+        # Exibir o gráfico no Streamlit
+        st.altair_chart(chart, use_container_width=False)
+
+
+        # Criação do gráfico de Corrente
+        chart = alt.Chart(dados_filtrados).mark_line().encode(
+            x='Tempo',
+            y='Corrente',
+            color=alt.value('green'),  # Define a cor da linha como verde
+            tooltip=['Tempo:T', 'RPM:Q']  # Adiciona informações no tooltip
+        ).properties(
+            title='Corrente x Tempo',
+            width=700,  # Largura do gráfico
+            height=200,  # Altura do gráfico
+            background='#f0f0f0'  # Cor de fundo do gráfico
+        ).configure_axis(
+            labelColor='black',  # Cor dos números (valores dos eixos)
+            titleColor='blue'    # Cor dos títulos dos eixos
+        ).configure_title(
+            fontSize=20,
+            color='black',  # Cor do título do gráfico
+            anchor='start',  # Alinhamento do título (esquerda)
+            font='Verdana'
+        )
+        # Exibir o gráfico no Streamlit
+        st.altair_chart(chart, use_container_width=False)
+
+        # Criação do gráfico de Vazão
+        chart = alt.Chart(dados_filtrados).mark_line().encode(
             x='Tempo',
             y='Fluxo',
             color=alt.value('green'),  # Define a cor da linha como verde
             tooltip=['Tempo:T', 'Fluxo:Q', 'RPM:Q']  # Adiciona informações no tooltip
         ).properties(
-            title='Fluxo x Tempo',
-            width=600,  # Largura do gráfico
-            height=300,  # Altura do gráfico
+            title='Vazão x Tempo',
+            width=700,  # Largura do gráfico
+            height=200,  # Altura do gráfico
             background='#f0f0f0'  # Cor de fundo do gráfico
         ).configure_axis(
             labelColor='black',  # Cor dos números (valores dos eixos)
@@ -610,15 +679,15 @@ elif pagina == 'Monitoramento e Análise':
         st.altair_chart(chart, use_container_width=False)
 
         # Criação do gráfico de RPM
-        chart = alt.Chart(dados).mark_line().encode(
+        chart = alt.Chart(dados_filtrados).mark_line().encode(
             x='Tempo',
             y='RPM',
             color=alt.value('green'),  # Define a cor da linha como verde
             tooltip=['Tempo:T', 'RPM:Q']  # Adiciona informações no tooltip
         ).properties(
             title='Velocidade x Tempo',
-            width=600,  # Largura do gráfico
-            height=300,  # Altura do gráfico
+            width=700,  # Largura do gráfico
+            height=200,  # Altura do gráfico
             background='#f0f0f0'  # Cor de fundo do gráfico
         ).configure_axis(
             labelColor='black',  # Cor dos números (valores dos eixos)
@@ -631,29 +700,6 @@ elif pagina == 'Monitoramento e Análise':
         )
         # Exibir o gráfico no Streamlit
         st.altair_chart(chart, use_container_width=False)
-
-        # Criação do gráfico de Tensão
-        # chart = alt.Chart(dados).mark_line().encode(
-        #     x='Tempo',
-        #     y='Tensao',
-        #     color=alt.value('green'),  # Define a cor da linha como verde
-        #     tooltip=['Tempo:T', 'RPM:Q']  # Adiciona informações no tooltip
-        # ).properties(
-        #     title='Tensão x Tempo',
-        #     width=600,  # Largura do gráfico
-        #     height=300,  # Altura do gráfico
-        #     background='#f0f0f0'  # Cor de fundo do gráfico
-        # ).configure_axis(
-        #     labelColor='black',  # Cor dos números (valores dos eixos)
-        #     titleColor='blue'    # Cor dos títulos dos eixos
-        # ).configure_title(
-        #     fontSize=20,
-        #     color='black',  # Cor do título do gráfico
-        #     anchor='start',  # Alinhamento do título (esquerda)
-        #     font='Verdana'
-        # )
-        # # Exibir o gráfico no Streamlit
-        # st.altair_chart(chart, use_container_width=False)
       
     with coln2: # Espaço entre colunas
         pass # Espaço entre colunas 1 e 3
@@ -661,7 +707,6 @@ elif pagina == 'Monitoramento e Análise':
     with coln3: # Estrutura personalizada de exibição
         coln31, coln32, coln33, coln34 = st.columns(4)
         with coln31:
-            #pass
             # Criar uma estrutura personalizada
             st.markdown(
                 f"""
@@ -673,8 +718,7 @@ elif pagina == 'Monitoramento e Análise':
                 </div>
                 """, 
                 unsafe_allow_html=True
-            )
-            
+            )   
         with coln32:
             #pass
             st.markdown(
@@ -704,7 +748,7 @@ elif pagina == 'Monitoramento e Análise':
             # Criar uma estrutura personalizada
             st.markdown(
                 f"""
-                <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: 5px; background-color: #f0f0f0;">
+                <div style="font-size: 23px; font-weight: normal; color: black; margin-bottom: 6px; background-color: #f0f0f0;">
                     Velocidade [rpm]
                 </div>
                 <div style="font-size: 45px; font-weight: bold; color: green; padding: 10px; border-radius: 5px; background-color: #f0f0f0;">
@@ -742,24 +786,24 @@ elif pagina == 'Monitoramento e Análise':
         ('---')
         #Menu lateral gráfico comparativo
         st.sidebar.markdown(f"""
-                <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -10px; background-color: #;">                      Comparativo entre gráficos
+                <div style="font-size: 22px; font-weight: bold; color: green; margin-bottom: -10px; background-color: #;">                      Comparativo entre gráficos
                 </div>""", 
                 unsafe_allow_html=True)
         st.sidebar.markdown(f"""
-                <div style="font-size: 23px; font-weight: normal; color: black; margin-bottom: -40px; background-color: #;">                      Eixo primário:
+                <div style="font-size: 23px; font-weight: normal; color: black; margin-bottom: -50px; background-color: #;">                      Eixo primário:
                 </div>""", 
                 unsafe_allow_html=True)      
         eixo1 = st.sidebar.selectbox(label='-',options=['Corrente', 'Tensao', 'RPM', 'Fluxo'],index=None,placeholder="Escolha uma opção", label_visibility='hidden', key="ID4")
 
         st.sidebar.markdown(f"""
-                <div style="font-size: 23px; font-weight: normal; color: black; margin-bottom: -40px; background-color: #;">                      Eixo secundário:
+                <div style="font-size: 23px; font-weight: normal; color: black; margin-bottom: -50px; background-color: #;">                      Eixo secundário:
                 </div>""",
                 unsafe_allow_html=True)
         eixo2 = st.sidebar.selectbox(label='-',options=['Corrente', 'Tensao', 'RPM', 'Fluxo'],index=None,placeholder="Escolha uma opção", label_visibility='hidden',key='ID5')
 
         #Inserção gráfico comparativo
         st.markdown("""
-                <div style="font-size: 24px; font-weight: bold; color: black; margin-bottom: 5px; background-color: #;">
+                <div style="font-size: 24px; font-weight: bold; color: black; margin-bottom: -5px; background-color: #;">
                     Gráfico comparativo
                 </div>""",    
                 unsafe_allow_html=True)
@@ -770,23 +814,22 @@ elif pagina == 'Monitoramento e Análise':
                 </div>""",
                 unsafe_allow_html=True)
         else:
-            st.session_state.fig = graf_plotly(dados,eixo_x='Tempo', eixo_y1=eixo1, eixo_y2=eixo2,Tit_eixo1=eixo1,Tit_eixo2=eixo2)
+            st.session_state.fig = graf_plotly(dados_filtrados,eixo_x='Tempo', eixo_y1=eixo1, eixo_y2=eixo2,Tit_eixo1=eixo1,Tit_eixo2=eixo2)
             st.plotly_chart(st.session_state.fig, use_container_width=True)
 
 
         # Menu lateral de comandos para o arduino
         st.sidebar.markdown(custom_css,unsafe_allow_html=True)
         st.sidebar.markdown("""
-                <div style="font-size: 22px; font-weight: bold; color: green; margin-bottom: -40px; margin-top: -20px; background-color: #;">
+                <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -50px; margin-top: 5px; background-color: #;">
                     Nível bomba:
                 </div>""",    
                 unsafe_allow_html=True)
         st.session_state.param_bomba = st.sidebar.number_input('-',min_value=0, max_value=255, label_visibility='hidden', key='ID6')
 
-
         st.sidebar.markdown(custom_css,unsafe_allow_html=True)
         st.sidebar.markdown("""
-                <div style="font-size: 22px; font-weight: bold; color: green; margin-bottom: -15px; margin-top: -15px; background-color: #;">
+                <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -65px; margin-top: 0px; background-color: #;">
                     Nível carga (Ohm):
                 </div>""",    
                 unsafe_allow_html=True)
@@ -798,7 +841,7 @@ elif pagina == 'Monitoramento e Análise':
 
         st.sidebar.markdown(custom_css,unsafe_allow_html=True)
         st.sidebar.markdown("""
-                <div style="font-size: 22px; font-weight: bold; color: green; margin-bottom: -55px; margin-top: -10px; background-color: #;">
+                <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -5px; margin-top: -10px; background-color: #;">
                     Enviar parâmetros
                 </div>""",    
                 unsafe_allow_html=True)
@@ -819,7 +862,7 @@ elif pagina == 'Monitoramento e Análise':
 
         st.sidebar.markdown(custom_css,unsafe_allow_html=True)
         st.sidebar.markdown("""
-                <div style="font-size: 22px; font-weight: bold; color: green; margin-bottom: -40px; margin-top: -10px; background-color: #;">
+                <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -20px; margin-top: -20px; background-color: #;">
                     Ativar
                 </div>""",    
                 unsafe_allow_html=True)
@@ -829,7 +872,7 @@ elif pagina == 'Monitoramento e Análise':
 
         st.sidebar.markdown(custom_css,unsafe_allow_html=True)
         st.sidebar.markdown("""
-                <div style="font-size: 22px; font-weight: bold; color: green; margin-bottom: -40px; margin-top: -10px; background-color: #;">
+                <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -20px; margin-top: -20px; background-color: #;">
                     Desativar
                 </div>""",    
                 unsafe_allow_html=True)
