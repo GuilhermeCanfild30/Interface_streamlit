@@ -1,0 +1,144 @@
+# A programação do código a seguir deve ser inserida no arduino através do Software Arduino (IDE).
+
+
+#include "EmonLib.h"
+EnergyMonitor emon1;
+
+// Sensores de corrente e tensão
+#define CALIB_CORRENTE 20.60
+#define CALIB_TENSAO 820.0
+#define PINO_CORRENTE A1
+#define PINO_TENSAO A0
+float ruido_corrente = 0.20;
+float ruido_tensao = 14.00;
+double valor_corrente = 0.0;
+double valor_tensao = 0.0;
+int comando = 0;
+
+// Sensor de RPM
+#define PINO_RPM 3
+volatile int pulsos = 0;
+int rpm = 0;
+unsigned int pulsos_por_volta = 8;
+unsigned long ultima_leitura_rpm = 0;
+unsigned long intervalo_rpm = 1000;
+int CALIB_RPM = 1.15;
+
+// Sensor de fluxo
+#define PINO_FLUXO 2
+volatile int contador_fluxo = 0;
+double vazao = 0.0;
+unsigned long ultima_leitura_fluxo = 0;
+unsigned long intervalo_fluxo = 1000;
+
+// Controle da bomba
+#define PINO_BOMBA 5
+int velocidade_bomba = 0;
+int nova_velocidade = 0;
+unsigned long ultima_leitura_bomba = 0;
+unsigned long intervalo_bomba = 200;
+
+void setup() {
+  Serial.begin(9600);
+  emon1.voltage(PINO_TENSAO, CALIB_TENSAO, 1.7);
+  emon1.current(PINO_CORRENTE, CALIB_CORRENTE);
+
+  pinMode(PINO_RPM, INPUT);
+  pinMode(PINO_FLUXO, INPUT);
+  pinMode(PINO_BOMBA, OUTPUT);
+
+  attachInterrupt(digitalPinToInterrupt(PINO_RPM), contadorRPM, FALLING);
+  attachInterrupt(digitalPinToInterrupt(PINO_FLUXO), incrementarPulso, RISING);
+}
+
+void loop() {
+  controleBomba();
+  lerTensaoCorrente();
+  lerRPM();
+  lerFluxo();
+
+  // Imprime todas as leituras ao mesmo tempo
+  Serial.print("CORRENTE:");
+  Serial.print(valor_corrente);
+  Serial.print("A | ");
+  Serial.print("TENSÃO:");
+  Serial.print(valor_tensao, 0);
+  Serial.print("V | ");
+  Serial.print("ROTAÇÃO:");
+  Serial.print(rpm, DEC);
+  Serial.print("RPM | ");
+  Serial.print("VAZÃO:");
+  Serial.print(vazao);
+  // Serial.print(velocidade_bomba); //Apenas para testar retorno de dado na interface
+  Serial.println(" l/min");
+
+  delay(2000);
+}
+
+void controleBomba() {
+  unsigned long tempo_atual = millis();
+  if (tempo_atual - ultima_leitura_bomba > intervalo_bomba) {
+    if (Serial.available() > 0) {
+      comando = Serial.parseInt();
+      nova_velocidade = comando;
+      ultima_leitura_bomba = tempo_atual;  // Atualiza o tempo da última leitura
+
+      if (nova_velocidade >= 0 && nova_velocidade <= 255 && nova_velocidade != velocidade_bomba) {
+        velocidade_bomba = nova_velocidade;
+        analogWrite(PINO_BOMBA, velocidade_bomba);
+      }
+      while (Serial.available() > 0) {
+        Serial.read();
+      }
+    }
+  }
+}
+
+void lerTensaoCorrente() {
+  float media_corrente = 0;
+  float media_tensao = 0;
+
+  for (int i = 0; i < 5; i++) {
+    emon1.calcVI(17, 100);
+    media_corrente += emon1.Irms;
+    media_tensao += emon1.Vrms;
+  }
+
+  valor_corrente = (media_corrente / 5) - ruido_corrente;
+  valor_tensao = (media_tensao / 5) - ruido_tensao;
+
+  // Limita valores negativos
+  if (valor_corrente < 0) valor_corrente = 0;
+  if (valor_tensao < 0) valor_tensao = 0;
+}
+
+void lerRPM() {
+  unsigned long tempo_atual = millis();
+  if (tempo_atual - ultima_leitura_rpm >= intervalo_rpm) {
+    detachInterrupt(digitalPinToInterrupt(PINO_RPM));
+    rpm = (pulsos * 60) / pulsos_por_volta;
+    pulsos = 0;
+    ultima_leitura_rpm = tempo_atual;
+    attachInterrupt(digitalPinToInterrupt(PINO_RPM), contadorRPM, FALLING);
+  }
+  rpm = CALIB_RPM*rpm;
+}
+
+void lerFluxo() {
+  unsigned long tempo_atual = millis();
+  if (tempo_atual - ultima_leitura_fluxo >= intervalo_fluxo) {
+    detachInterrupt(digitalPinToInterrupt(PINO_FLUXO));
+    vazao = (contador_fluxo * 2.25 * 60) / 1000.0;
+    contador_fluxo = 0;
+    ultima_leitura_fluxo = tempo_atual;
+    attachInterrupt(digitalPinToInterrupt(PINO_FLUXO), incrementarPulso, RISING);
+  }
+}
+
+void contadorRPM() {
+  pulsos++;
+}
+
+void incrementarPulso() {
+  contador_fluxo++;
+}
