@@ -1,4 +1,4 @@
-Colaboradores para execução do projeto:
+Colaboradores na execução do projeto:
 - Fabricio Yutaka Kuwabata Takigawa (Coordenador)
 - Felipe Alves da Silveira
 - Gabriel da Silva Oliveira
