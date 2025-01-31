@@ -13,6 +13,7 @@ Manual de instruções para desenvolvimento / aplicação da bancada didática d
   . Arduino IDE
 
  **Iniciando após desenvolver estrutura física**
+  
   Requisitos: ter python instalado, VScode.
  - Baixar este repositório no seu PC
  
