@@ -5,9 +5,9 @@ Colaboradores na execução do projeto:
 - Guilherme Marcos Canfild
 
 
-Manual de instruções para desenvolvimento / aplicação da bancada didática do gerador hidrelétrico.
-- Estrutura
-- Lista de componentes
+Manual de instruções para construção da bancada didática:
+- Estrutura (Listando medidas e materiais necessários)
+- Componentes eletrônicos (Lista de sensores e diagrama unifilar)
 - Softwares utilizados
   . VScode
   . Arduino IDE
