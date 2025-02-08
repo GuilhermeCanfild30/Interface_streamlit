@@ -827,14 +827,14 @@ elif pagina == 'Monitoramento e Análise':
                 unsafe_allow_html=True)
         st.session_state.param_bomba = st.sidebar.number_input('-',min_value=0, max_value=255, label_visibility='hidden', key='ID6')
 
-        st.sidebar.markdown(custom_css,unsafe_allow_html=True)
-        st.sidebar.markdown("""
-                <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -65px; margin-top: 0px; background-color: #;">
-                    Nível carga (Ohm):
-                </div>""",    
-                unsafe_allow_html=True)
-        st.sidebar.markdown(custom_css,unsafe_allow_html=True)
-        st.session_state.param_carga = st.sidebar.number_input('-',min_value=0, max_value=25, label_visibility='hidden', key='ID7')
+        # st.sidebar.markdown(custom_css,unsafe_allow_html=True)
+        # st.sidebar.markdown("""
+        #         <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -65px; margin-top: 0px; background-color: #;">
+        #             Nível carga (Ohm):
+        #         </div>""",    
+        #         unsafe_allow_html=True)
+        # st.sidebar.markdown(custom_css,unsafe_allow_html=True)
+        # st.session_state.param_carga = st.sidebar.number_input('-',min_value=0, max_value=25, label_visibility='hidden', key='ID7')
 
        
         # Comando comunicação (ativar-desativar)
