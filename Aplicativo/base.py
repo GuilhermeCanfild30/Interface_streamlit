@@ -816,7 +816,7 @@ elif pagina == 'Monitoramento e Análise':
         if eixo1 == None or eixo2 == None:
             st.markdown("""
                 <div style="font-size: 22px; font-weight: normal; color: black; margin-bottom: 5px; background-color: #f0f0f0;">
-                    Selecionar parâmetros no menu lateral
+                    Selecionar parâmetros no Menu lateral
                 </div>""",
                 unsafe_allow_html=True)
         else:
