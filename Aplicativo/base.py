@@ -13,7 +13,21 @@ from streamlit_autorefresh import st_autorefresh
 
 
 # Configuração básica da página
-st.set_page_config(page_title="Simulador de geração hidrelétrica.",page_icon=':droplet:', layout='wide', initial_sidebar_state='auto')
+st.set_page_config(page_title="Simulador de geração hidrelétrica.",page_icon=':droplet:', layout='wide', initial_sidebar_state='expanded')
+
+# Adicionando CSS para responsividade
+st.markdown("""
+    <style>
+        @media only screen and (max-width: 600px) {
+            .css-1d391kg {
+                font-size: 14px;
+            }
+            .css-18e3th9 {
+                padding: 10px;
+            }
+        }
+    </style>
+""", unsafe_allow_html=True)
 
     # Nome do arquivo CSV
 csv_file = 'dados.csv'  # nome do arquivo CSV onde os dados serão armazenados
