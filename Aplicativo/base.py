@@ -35,9 +35,6 @@ if 'thread_started' not in st.session_state:
 if 'valor_anterior' not in st.session_state:
     st.session_state.valor_anterior = 0
 
-if 'status_botao' not in st.session_state:
-    st.session_state.status_botao = False
-
 if 'comunicação' not in st.session_state:
     st.session_state.comunicação = False
 
@@ -71,8 +68,8 @@ if 'fig' not in st.session_state:
 if 'param_bomba' not in st.session_state:
     st.session_state.param_bomba = 0
 
-if 'param_carga' not in st.session_state:
-    st.session_state.param_carga = 0
+# if 'param_carga' not in st.session_state:
+#     st.session_state.param_carga = 0
 
 if 'lig_del' not in st.session_state:
     st.session_state.lig_del = False
@@ -81,7 +78,6 @@ if 'set_time' not in st.session_state:
     st.session_state.set_time = None
 
 #Acelerar processamento de dados do arquivo, evitando demora frequente sempre que recarregar a página.
-#Esse arquivo .csv será alterado de acordo com o botão pressionado, gerando os dados para os gráficos e informações de acordo com o solicitado (de acordo com a função/aplicação).
 
 @st.cache_data(ttl=1)
 def ler_dados(): #Lê os dados do CSV
@@ -238,6 +234,15 @@ def parar_comunicação_serial():
         st.info("Não há porta serial aberta para fechar.")
 
 
+def enviar_comando():
+    try:
+        st.session_state.ser.write(f"{str(st.session_state.param_bomba)}\n".encode())
+        st.write("Comando enviado:", str(st.session_state.param_bomba))
+        st.session_state.ser.reset_input_buffer()  # Limpa o buffer de entrada
+    except Exception as e:
+        st.error(f"Erro ao enviar comando: {e}")
+
+
 def comunicar_serial(ser, csv_file, porta, estado_thread):
     # Esta verificação impede que o código de comunicação continue caso ser seja None. Se ser for None, significa que a porta serial não foi inicializada ou que foi fechada anteriormente (por exemplo, ao chamar parar_comunicação_serial()).
     if ser is None or not ser.is_open:
@@ -351,7 +356,7 @@ div.stSlider > div > div > div > div > div {
 
 
 ####### Menu lateral #######
-st.sidebar.image("aplicativo/Imagens e videos/simbol_ifsc.jpeg", width=60)
+st.sidebar.image("aplicativo/static/simbol_ifsc.jpeg", width=60)
 st.sidebar.markdown("""
                 <div style="font-size: 30px; font-weight: bold; color: black; margin-bottom: 10px; margin-top: -5px; background-color: #;">
                     Menu
@@ -365,8 +370,9 @@ pagina = 'Monitoramento e Análise'
 # Espaço reservado para os dados
 dados_placeholder = st.sidebar.empty()
 
-# Atualiza os dados a cada 1 segundo
-count = st_autorefresh(interval=5000, limit=None, key="fizzbuzzcounter")
+# # Atualiza os dados a cada 1 segundo
+# count = st_autorefresh(interval=5000, limit=None, key="fizzbuzzcounter")
+
 
 # Verifica se o arquivo CSV foi modificado e atualiza os dados
 current_modified = os.path.getmtime("dados.csv")
@@ -847,17 +853,7 @@ elif pagina == 'Monitoramento e Análise':
                 unsafe_allow_html=True)
         
         st.sidebar.markdown(custom_css,unsafe_allow_html=True)
-        st.session_state.status_botao = st.sidebar.button('Enviar',key='ID8')
-        if st.session_state.status_botao:
-            comando = str(st.session_state.param_bomba)
-            try:
-                st.session_state.ser.write(f"{comando}\n".encode())
-                st.write("Comando enviado:", comando)
-                # time.sleep(0.5)
-                st.session_state.ser.reset_input_buffer()  # Limpa o buffer de entrada
-                st.session_state.status_botao = False
-            except Exception as e:
-                st.error(f"Erro ao enviar comando: {e}")
+        st.sidebar.button('Enviar',key='ID8',on_click=enviar_comando)
 
 
         st.sidebar.markdown(custom_css,unsafe_allow_html=True)
