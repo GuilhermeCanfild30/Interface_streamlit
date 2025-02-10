@@ -356,7 +356,7 @@ div.stSlider > div > div > div > div > div {
 
 
 ####### Menu lateral #######
-# st.sidebar.image("aplicativo/static/simbol_ifsc.jpeg", width=60)
+st.sidebar.image("aplicativo/static/simbol_ifsc.jpeg", width=60)
 st.sidebar.markdown("""
                 <div style="font-size: 30px; font-weight: bold; color: black; margin-bottom: 10px; margin-top: -5px; background-color: #;">
                     Menu
