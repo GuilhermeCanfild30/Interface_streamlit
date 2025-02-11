@@ -4,6 +4,9 @@ Colaboradores na execução do projeto:
 - Gabriel da Silva Oliveira
 - Guilherme Marcos Canfild
 
+Assista a um vídeo no YouTube apresentando-se a bancada didática:
+https://youtu.be/7vzro6Z_dTE
+
 
 Manual de instruções para construção da bancada didática:
 - Estrutura (Listando medidas e materiais necessários)

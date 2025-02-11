@@ -584,7 +584,10 @@ if pagina == 'Ambiente de Simulação':
     #         #st.image(niveis_leds[n_led])
 
 elif pagina == 'Monitoramento e Análise':
-# Certifique-se de que a coluna 'Timestamp' está no formato datetime
+    # Link direcionado ao repositório da bancada didática no GitHub
+    st.sidebar.markdown("[🔗 Baixe o repositório no GitHub](https://github.com/GuilhermeCanfild30/Interface_streamlit/tree/main)")
+
+    # Certifique-se de que a coluna 'Timestamp' está no formato datetime
     dados['Tempo'] = pd.to_datetime(dados['Tempo'], errors='coerce')
 
     # Filtro de datas
