@@ -9,13 +9,14 @@ import time, datetime
 import serial
 import serial.tools.list_ports
 import threading
+import numpy as np
 from streamlit_autorefresh import st_autorefresh
 
 
 # Configuração básica da página
 st.set_page_config(page_title="Simulador de geração hidrelétrica.",page_icon=':droplet:', layout='wide', initial_sidebar_state='auto')
 
-    # Nome do arquivo CSV
+# Nome do arquivo CSV
 csv_file = 'dados.csv'  # nome do arquivo CSV onde os dados serão armazenados
 
 # Verificar se o arquivo CSV já existe; se não, criar e adicionar cabeçalho
@@ -59,11 +60,11 @@ if 'current_index' not in st.session_state:
 if 'last_modified' not in st.session_state:
     st.session_state.last_modified = os.path.getmtime("dados.csv")
 
-if 'fig_parado' not in st.session_state:
-    st.session_state.fig_parado = None
-
 if 'fig' not in st.session_state:
     st.session_state.fig = None
+
+if 'velocidade_turbina' not in st.session_state:
+    st.session_state.velocidade_turbina = []
 
 if 'param_bomba' not in st.session_state:
     st.session_state.param_bomba = 0
@@ -169,6 +170,48 @@ def graf_plotly(dados,eixo_x,eixo_y1,eixo_y2,Tit_eixo1,Tit_eixo2): #Função gr�
     )
     
     return fig
+
+
+def desenhar_leds(n_led, intensidade_base=0.8):
+            fig = go.Figure()
+            
+            total_leds = 8  # Quantidade máxima de LEDs
+            
+            for i in range(total_leds):
+                # Criando um efeito pulsante no brilho
+                intensidade_pulso = intensidade_base + 0.2 * np.sin(time.time() * 2)  
+                intensidade = min(1, (i + 1) / total_leds * intensidade_pulso)  
+                
+                if i < n_led:
+                    cor = f"rgba(255, 215, 0, {intensidade})"  # Amarelo Dourado com brilho variável
+                    borda = "rgba(255, 255, 100, 1)"  # Contorno brilhante
+                else:
+                    cor = "rgba(50, 50, 50, 0.2)"  # LED apagado
+                    borda = "rgba(100, 100, 100, 0.5)"  # Contorno mais discreto
+
+                fig.add_trace(go.Scatter(
+                    x=[i], y=[1],
+                    mode="markers",
+                    marker=dict(
+                        size=60,
+                        color=cor,
+                        line=dict(color=borda, width=3),
+                        opacity=1
+                    ),
+                    showlegend=False
+                ))
+
+            # Configuração do layout
+            fig.update_layout(
+                xaxis=dict(visible=False, range=[-1, total_leds]),
+                yaxis=dict(visible=False, range=[0, 2]),
+                width=500, height=200,
+                paper_bgcolor="black",  # Fundo preto
+                plot_bgcolor="black",
+                margin=dict(l=0, r=0, t=0, b=0)
+            )
+
+            return fig
 
 
 def iniciar_comunicação_serial():
@@ -322,6 +365,15 @@ rpms = []  # armazena RPM
 correntes = []  # armazena corrente (Amperes)
 tensoes = [] # armazena tensão
 
+
+# Verifica se o arquivo CSV foi modificado e atualiza os dados
+current_modified = os.path.getmtime("dados.csv")
+if current_modified != st.session_state.last_modified:
+    dados = ler_dados()
+    st.session_state.last_modified = current_modified
+else:
+    dados = ler_dados()
+
 # Adicionar CSS customizado
 custom_css = """
 <style>
@@ -355,7 +407,14 @@ div.stSlider > div > div > div > div > div {
 """
 
 
-####### Menu lateral #######
+#------------------ Interface ----------------------
+
+# Atualização automática dos dados a cada 5 segundos
+st_autorefresh(interval=5000, limit=None, key="data_refresh")
+
+
+#----------- Menu lateral ---------------
+
 st.sidebar.image("aplicativo/static/simbol_ifsc.jpeg", width=60)
 st.sidebar.markdown("""
                 <div style="font-size: 30px; font-weight: bold; color: black; margin-bottom: 10px; margin-top: -5px; background-color: #;">
@@ -363,230 +422,16 @@ st.sidebar.markdown("""
                 </div>""",    
                 unsafe_allow_html=True)
 
-# Definição das página
-# pagina = st.sidebar.radio('Interface Interativa:',['Monitoramento e Análise', 'Ambiente de Simulação'], key="ID1")
-pagina = 'Monitoramento e Análise'
-
-# Espaço reservado para os dados
-dados_placeholder = st.sidebar.empty()
-
-# # Atualiza os dados a cada 1 segundo
-# count = st_autorefresh(interval=5000, limit=None, key="fizzbuzzcounter")
+# Link direcionado ao repositório da bancada didática no GitHub
+st.sidebar.markdown("[🔗 Baixe o repositório no GitHub](https://github.com/GuilhermeCanfild30/Interface_streamlit/tree/main)")
 
 
-# Verifica se o arquivo CSV foi modificado e atualiza os dados
-current_modified = os.path.getmtime("dados.csv")
-if current_modified != st.session_state.last_modified:
-    dados = ler_dados()
-    st.session_state.last_modified = current_modified
-else:
-    dados = ler_dados()
+#----------------- Abas principais da Interface -----------------
 
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Monitoramento", "📈 Comparativo", "📖 Tutorial", "🎴 Animação"])
 
-####### Página da interface #######
-
-# Atualização automática dos dados a cada 5 segundos
-st_autorefresh(interval=5000, limit=None, key="data_refresh")
-
-
-if pagina == 'Ambiente de Simulação':
-    st.info("Página em revisão e desenvolvimento")
-    # dados['Tempo'] = pd.to_datetime(dados['Tempo'], errors='coerce')
-    # st.markdown(f"""
-    #             <div style="font-size: 40px; font-weight: bold; color: black; margin-bottom: -20px; background-color: #;">                      Simulador do kit de gerador hidrelétrica
-    #             </div>""", 
-    #             unsafe_allow_html=True)
-    # ('---')
-
-    # col1, col2 = st.columns(spec=[0.7, 1])
-    # # Coluna 2 - Parâmetros de simulação
-    # with col2:
-    #     vazaomax = 30
-    #     cargamax = 40
-    #     st.sidebar.markdown(f"""
-    #             <div style="font-size: 26px; font-weight: bold; color: green; margin-bottom: -20px; background-color: #;">                      Parâmetros
-    #             </div>""", 
-    #             unsafe_allow_html=True)
-                    
-    #     # Adiciona o CSS customizado na sidebar
-    #     st.sidebar.markdown(f"""
-    #             <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: -55px; background-color: #;">                      Vazão (cm³/s):
-    #             </div>""", 
-    #             unsafe_allow_html=True)
-    #     st.sidebar.markdown(custom_css, unsafe_allow_html=True)
-    #     vazao = st.sidebar.slider('-', 0, vazaomax,key='slidervazao', label_visibility='hidden')
+with tab1:
     
-    #     st.sidebar.markdown(f"""
-    #             <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: -55px; background-color: #;">                      Carga (W):
-    #             </div>""",
-    #             unsafe_allow_html=True)
-    #     st.sidebar.markdown(custom_css, unsafe_allow_html=True)
-    #     carga = st.sidebar.slider('-', 0, cargamax, key='slidercarga', label_visibility='hidden')
-
-    #     # Gráficos individuais - selecionáveis
-    #     st.markdown(f"""
-    #             <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: -25px; background-color: #;">                      Selecione um gráfico dos dados históricos para ver
-    #             </div>""",
-    #             unsafe_allow_html=True)
-    #     options = st.selectbox('Selecione',options=['Corrente', 'Tensao', 'Fluxo', 'RPM'],label_visibility='hidden', key="ID2")
-    #     # Criação do gráfico de Fluxo com Altair
-    #     chart = alt.Chart(dados).mark_line().encode(
-    #         x='Tempo',
-    #         y= options,
-    #         color=alt.value('green'),  # Define a cor da linha como verde
-    #         tooltip=['Tempo:T', 'Fluxo:Q', 'RPM:Q']  # Adiciona informações no tooltip
-    #     ).properties(
-    #         title=f'{options} x Tempo',
-    #         width=600,  # Largura do gráfico
-    #         height=300,  # Altura do gráfico
-    #         background='#f0f0f0'  # Cor de fundo do gráfico
-    #     ).configure_axis(
-    #         labelColor='black',  # Cor dos números (valores dos eixos)
-    #         titleColor='blue'    # Cor dos títulos dos eixos
-    #     ).configure_title(
-    #         fontSize=20,
-    #         color='black',  # Cor do título do gráfico
-    #         anchor='start',  # Alinhamento do título (esquerda)
-    #         font='Verdana'
-    #     )
-    #     # Exibir o gráfico no Streamlit
-    #     st.altair_chart(chart, use_container_width=True)
-
-
-    #     st.sidebar.markdown('---')
-
-
-    #     # Seleção parâmetros do gráfico comparativo (barra lateral)
-    #     st.sidebar.markdown(f"""
-    #             <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -10px; background-color: #;">                      Comparativo entre gráficos
-    #             </div>""", 
-    #             unsafe_allow_html=True)
-    #     st.sidebar.markdown(f"""
-    #             <div style="font-size: 23px; font-weight: normal; color: black; margin-bottom: -40px; background-color: #;">                      Eixo primário:
-    #             </div>""", 
-    #             unsafe_allow_html=True)      
-    #     eixo1 = st.sidebar.selectbox(label='-',options=['Corrente', 'Tensao', 'RPM', 'Fluxo'],index=None,placeholder="Escolha uma opção", label_visibility='hidden', key=772)
-
-    #     st.sidebar.markdown(f"""
-    #             <div style="font-size: 23px; font-weight: normal; color: black; margin-bottom: -40px; background-color: #;">                      Eixo secundário:
-    #             </div>""",
-    #             unsafe_allow_html=True)
-    #     eixo2 = st.sidebar.selectbox(label='-',options=['Corrente', 'Tensao', 'RPM', 'Fluxo'],index=None,placeholder="Escolha uma opção", label_visibility='hidden',key='ID3')
-
-    #     espaço_grafico = st.empty()
-    #     #Inserção gráfico comparativo
-    #     st.markdown("""
-    #             <div style="font-size: 24px; font-weight: bold; color: black; margin-bottom: 5px; background-color: #;">
-    #                 Gráfico comparativo
-    #             </div>""",    
-    #             unsafe_allow_html=True)
-    #     if eixo1 == None or eixo2 == None:
-    #         st.markdown("""
-    #             <div style="font-size: 22px; font-weight: normal; color: black; margin-bottom: 5px; background-color: #f0f0f0;">
-    #                 Selecionar parâmetros no menu lateral
-    #             </div>""",
-    #             unsafe_allow_html=True)
-    #     else:
-    #         st.session_state.fig = graf_plotly(dados,eixo_x='Tempo', eixo_y1=eixo1, eixo_y2=eixo2,Tit_eixo1=eixo1,Tit_eixo2=eixo2)
-    #         st.plotly_chart(st.session_state.fig, use_container_width=True)
-
-
-    # #Coluna 1 - Animação do kit
-    # with col1:
-    # # Condições para exibição da velocidade e geração nos leds
-    #     if  vazao == 0: # Desligado
-    #         v_turbina = 0
-    #         n_led = 0
-    #     elif vazao <= (0.3 * vazaomax):  # Até 30% da vazão - máx 2 leds
-    #         if carga == 0:
-    #             v_turbina = 1
-    #             n_led = 2
-    #         elif carga > (0.40 * cargamax): # Carga acima de 40%
-    #             v_turbina = 5 #parado
-    #             n_led = 0            
-    #         else:
-    #             v_turbina = 1
-    #             n_led = 1
-    #     elif vazao <= (0.5 * vazaomax): # Até 50% da vazão - máx 4 leds
-    #         if carga <= (0.3 * cargamax):
-    #             v_turbina = 3
-    #             n_led = 4
-    #         elif carga <= (0.6 * cargamax):
-    #             v_turbina = 2
-    #             n_led = 3
-    #         elif carga <= (0.9 * cargamax):
-    #             v_turbina = 2
-    #             n_led = 2
-    #         else:
-    #             v_turbina = 1
-    #             n_led = 1
-    #     elif vazao <= (0.8 * vazaomax): # Até 80% da vazão - máx 6 leds
-    #         if carga <= (0.3 * cargamax):
-    #             v_turbina = 4
-    #             n_led = 6
-    #         elif carga <= (0.5 * cargamax):
-    #             v_turbina = 3
-    #             n_led = 5
-    #         elif carga <= (0.7 * cargamax):
-    #             v_turbina = 3
-    #             n_led = 4
-    #         elif carga <= (0.85 * cargamax):
-    #             v_turbina = 2
-    #             n_led = 3
-    #         elif carga <= (0.95 * cargamax):
-    #             v_turbina = 2
-    #             n_led = 2               
-    #         else:
-    #             v_turbina = 2
-    #             n_led = 2
-    #     elif vazao <= (1 * vazaomax): # Até 100% da vazão - máx 8 leds
-    #         if carga <= (0.3 * cargamax):
-    #             v_turbina = 4
-    #             n_led = 8
-    #         elif carga <= (0.50 * cargamax):
-    #             v_turbina = 3
-    #             n_led = 7
-    #         elif carga <= (0.70 * cargamax):
-    #             v_turbina = 2
-    #             n_led = 6
-    #         elif carga <= (0.85 * cargamax):
-    #             v_turbina = 2
-    #             n_led = 5
-    #         elif carga <= (0.95 * cargamax):
-    #             v_turbina = 2
-    #             n_led = 4
-    #         else:
-    #             v_turbina = 2
-    #             n_led = 3
-
-    #     col1, col2 = st.columns(spec=[1, 0.2])
-    #     with col1:
-    #         velocidade_turbina = ["simulador_web/tela_web/Imagens e videos/vel_del.gif",
-    #                             "simulador_web/tela_web/Imagens e videos/vel_1.gif",
-    #                             "simulador_web/tela_web/Imagens e videos/vel_2.gif",
-    #                             "simulador_web/tela_web/Imagens e videos/vel_3.gif",
-    #                             "simulador_web/tela_web/Imagens e videos/vel_4.gif",
-    #                             "simulador_web/tela_web/Imagens e videos/vel_parado.gif"
-    #                             ]
-    #         st.image(velocidade_turbina[v_turbina], use_column_width=True)
-
-    #     with col2:
-    #         niveis_leds = ["simulador_web/tela_web/Imagens e videos/level6.3.gif",
-    #                         "simulador_web/tela_web/Imagens e videos/level1.gif",
-    #                         "simulador_web/tela_web/Imagens e videos/level2.gif",
-    #                         "simulador_web/tela_web/Imagens e videos/level3.gif", 
-    #                         "simulador_web/tela_web/Imagens e videos/level4.gif",
-    #                         "simulador_web/tela_web/Imagens e videos/level5.gif", 
-    #                         "simulador_web/tela_web/Imagens e videos/level6.gif", 
-    #                         "simulador_web/tela_web/Imagens e videos/level7.gif", 
-    #                         "simulador_web/tela_web/Imagens e videos/level8.gif"
-    #                         ]
-    #         #st.image(niveis_leds[n_led])
-
-elif pagina == 'Monitoramento e Análise':
-    # Link direcionado ao repositório da bancada didática no GitHub
-    st.sidebar.markdown("[🔗 Baixe o repositório no GitHub](https://github.com/GuilhermeCanfild30/Interface_streamlit/tree/main)")
-
     # Certifique-se de que a coluna 'Timestamp' está no formato datetime
     dados['Tempo'] = pd.to_datetime(dados['Tempo'], errors='coerce')
 
@@ -613,10 +458,89 @@ elif pagina == 'Monitoramento e Análise':
 
 
 # Apresentação dos dados e análises
-    coln1, coln2, coln3 = st.columns(spec=[1,0.2,1.2])
+    coln1 = st.columns(1)
 
-    with coln1:     # Criação dos gráficos com biblioteca Altair
+    # Estrutura personalizada de exibição
+    coln11, coln12, coln13, coln14, coln15 = st.columns(5)
+    with coln11:
+        # Criar uma estrutura personalizada
+        st.markdown(
+            f"""
+            <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: 5px; background-color: #f0f0f0;">
+                Tensão [V]
+            </div>
+            <div style="font-size: 45px; font-weight: bold; color: green; padding: 10px; border-radius: 5px; background-color: #f0f0f0;">
+                {(dados['Tensao'].iloc[-1]):.2f}
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )   
+    with coln12:
+        #pass
+        st.markdown(
+            f"""
+            <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: 5px; background-color: #f0f0f0;">
+                Corrente [A]
+            </div>
+            <div style="font-size: 45px; font-weight: bold; color: green; padding: 10px; border-radius: 5px; background-color: #f0f0f0;">
+                {(dados['Corrente'].iloc[-1]):.2f}
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+    with coln13:
+        st.markdown(
+            f"""
+            <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: 5px; background-color: #f0f0f0;">
+                Vazão [L/min]
+            </div>
+            <div style="font-size: 45px; font-weight: bold; color: green; padding: 10px; border-radius: 5px; background-color: #f0f0f0;">
+                {dados['Fluxo'].iloc[-1]}
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+    with coln14:
+        # Criar uma estrutura personalizada
+        st.markdown(
+            f"""
+            <div style="font-size: 23px; font-weight: normal; color: black; margin-bottom: 6px; background-color: #f0f0f0;">
+                Velocidade [rpm]
+            </div>
+            <div style="font-size: 45px; font-weight: bold; color: green; padding: 10px; border-radius: 5px; background-color: #f0f0f0;">
+                {dados['RPM'].iloc[-1]}
+            </div>
+            """, 
+            unsafe_allow_html=True
+        ) 
+    with coln15:
+        st.markdown(
+            f"""
+            <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: 5px; background-color: #f0f0f0;">
+                Potência [VA]
+            </div>
+            <div style="font-size: 45px; font-weight: bold; color: green; padding: 10px; border-radius: 5px; background-color: #f0f0f0;">
+                {(dados['Corrente'].iloc[-1] * dados['Tensao'].iloc[-1]):.2f}
+            </div>
+            """,    
+            unsafe_allow_html=True
+        )
+    # with coln36:
+    #     st.markdown(
+    #         f"""
+    #         <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: 5px; background-color: #f0f0f0;">
+    #             Rendimento [%]
+    #         </div>
+    #         <div style="font-size: 45px; font-weight: bold; color: green; padding: 10px; border-radius: 5px; background-color: #f0f0f0;">
+    #             {((dados['Corrente'].iloc[-1] * dados['Tensao'].iloc[-1]) / (220*0.5)):.2f}
+    #         </div>
+    #         """,    
+    #         unsafe_allow_html=True
+    #     )
+    ('---')
 
+    col1, col2 = st.columns(2)
+    with col1:     # Criação dos gráficos com biblioteca Altair
         # Criação do gráfico de Tensão
         chart = alt.Chart(dados_filtrados).mark_line().encode(
             x='Tempo',
@@ -626,7 +550,7 @@ elif pagina == 'Monitoramento e Análise':
         ).properties(
             title='Tensão x Tempo',
             width=700,  # Largura do gráfico
-            height=200,  # Altura do gráfico
+            height=300,  # Altura do gráfico
             background='#f0f0f0'  # Cor de fundo do gráfico
         ).configure_axis(
             labelColor='black',  # Cor dos números (valores dos eixos)
@@ -640,7 +564,7 @@ elif pagina == 'Monitoramento e Análise':
         # Exibir o gráfico no Streamlit
         st.altair_chart(chart, use_container_width=False)
 
-
+    with col2:
         # Criação do gráfico de Corrente
         chart = alt.Chart(dados_filtrados).mark_line().encode(
             x='Tempo',
@@ -650,7 +574,7 @@ elif pagina == 'Monitoramento e Análise':
         ).properties(
             title='Corrente x Tempo',
             width=700,  # Largura do gráfico
-            height=200,  # Altura do gráfico
+            height=300,  # Altura do gráfico
             background='#f0f0f0'  # Cor de fundo do gráfico
         ).configure_axis(
             labelColor='black',  # Cor dos números (valores dos eixos)
@@ -664,6 +588,8 @@ elif pagina == 'Monitoramento e Análise':
         # Exibir o gráfico no Streamlit
         st.altair_chart(chart, use_container_width=False)
 
+    col3, col4 = st.columns(2)
+    with col3:
         # Criação do gráfico de Vazão
         chart = alt.Chart(dados_filtrados).mark_line().encode(
             x='Tempo',
@@ -673,7 +599,7 @@ elif pagina == 'Monitoramento e Análise':
         ).properties(
             title='Vazão x Tempo',
             width=700,  # Largura do gráfico
-            height=200,  # Altura do gráfico
+            height=300,  # Altura do gráfico
             background='#f0f0f0'  # Cor de fundo do gráfico
         ).configure_axis(
             labelColor='black',  # Cor dos números (valores dos eixos)
@@ -687,6 +613,7 @@ elif pagina == 'Monitoramento e Análise':
         # Exibir o gráfico no Streamlit
         st.altair_chart(chart, use_container_width=False)
 
+    with col4:
         # Criação do gráfico de RPM
         chart = alt.Chart(dados_filtrados).mark_line().encode(
             x='Tempo',
@@ -696,7 +623,7 @@ elif pagina == 'Monitoramento e Análise':
         ).properties(
             title='Velocidade x Tempo',
             width=700,  # Largura do gráfico
-            height=200,  # Altura do gráfico
+            height=300,  # Altura do gráfico
             background='#f0f0f0'  # Cor de fundo do gráfico
         ).configure_axis(
             labelColor='black',  # Cor dos números (valores dos eixos)
@@ -709,91 +636,9 @@ elif pagina == 'Monitoramento e Análise':
         )
         # Exibir o gráfico no Streamlit
         st.altair_chart(chart, use_container_width=False)
-      
-    with coln2: # Espaço entre colunas
-        pass # Espaço entre colunas 1 e 3
 
-    with coln3: # Estrutura personalizada de exibição
-        coln31, coln32, coln33, coln34 = st.columns(4)
-        with coln31:
-            # Criar uma estrutura personalizada
-            st.markdown(
-                f"""
-                <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: 5px; background-color: #f0f0f0;">
-                    Tensão [V]
-                </div>
-                <div style="font-size: 45px; font-weight: bold; color: green; padding: 10px; border-radius: 5px; background-color: #f0f0f0;">
-                    {(dados['Tensao'].iloc[-1]):.2f}
-                </div>
-                """, 
-                unsafe_allow_html=True
-            )   
-        with coln32:
-            #pass
-            st.markdown(
-                f"""
-                <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: 5px; background-color: #f0f0f0;">
-                    Corrente [A]
-                </div>
-                <div style="font-size: 45px; font-weight: bold; color: green; padding: 10px; border-radius: 5px; background-color: #f0f0f0;">
-                    {(dados['Corrente'].iloc[-1]):.2f}
-                </div>
-                """, 
-                unsafe_allow_html=True
-            )
-        with coln33:
-            st.markdown(
-                f"""
-                <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: 5px; background-color: #f0f0f0;">
-                    Vazão [L/min]
-                </div>
-                <div style="font-size: 45px; font-weight: bold; color: green; padding: 10px; border-radius: 5px; background-color: #f0f0f0;">
-                    {dados['Fluxo'].iloc[-1]}
-                </div>
-                """, 
-                unsafe_allow_html=True
-            )
-        with coln34:
-            # Criar uma estrutura personalizada
-            st.markdown(
-                f"""
-                <div style="font-size: 23px; font-weight: normal; color: black; margin-bottom: 6px; background-color: #f0f0f0;">
-                    Velocidade [rpm]
-                </div>
-                <div style="font-size: 45px; font-weight: bold; color: green; padding: 10px; border-radius: 5px; background-color: #f0f0f0;">
-                    {dados['RPM'].iloc[-1]}
-                </div>
-                """, 
-                unsafe_allow_html=True
-            ) 
-        ('---')
-        coln35, coln36 = st.columns(2)
-        with coln35:
-            st.markdown(
-                f"""
-                <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: 5px; background-color: #f0f0f0;">
-                    Potência [VA]
-                </div>
-                <div style="font-size: 45px; font-weight: bold; color: green; padding: 10px; border-radius: 5px; background-color: #f0f0f0;">
-                    {(dados['Corrente'].iloc[-1] * dados['Tensao'].iloc[-1]):.2f}
-                </div>
-                """,    
-                unsafe_allow_html=True
-            )
-        with coln36:
-            st.markdown(
-                f"""
-                <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: 5px; background-color: #f0f0f0;">
-                    Rendimento [%]
-                </div>
-                <div style="font-size: 45px; font-weight: bold; color: green; padding: 10px; border-radius: 5px; background-color: #f0f0f0;">
-                    {((dados['Corrente'].iloc[-1] * dados['Tensao'].iloc[-1]) / (220*0.5)):.2f}
-                </div>
-                """,    
-                unsafe_allow_html=True
-            )
-        ('---')
-        #Menu lateral gráfico comparativo
+with tab2:
+    #Menu lateral gráfico comparativo
         st.sidebar.markdown(f"""
                 <div style="font-size: 22px; font-weight: bold; color: green; margin-bottom: -10px; background-color: #;">                      Comparativo entre gráficos
                 </div>""", 
@@ -826,57 +671,203 @@ elif pagina == 'Monitoramento e Análise':
             st.session_state.fig = graf_plotly(dados_filtrados,eixo_x='Tempo', eixo_y1=eixo1, eixo_y2=eixo2,Tit_eixo1=eixo1,Tit_eixo2=eixo2)
             st.plotly_chart(st.session_state.fig, use_container_width=True)
 
+with tab3:
+    st.write("## Tutorial...")
 
-        # Menu lateral de comandos para o arduino
-        st.sidebar.markdown(custom_css,unsafe_allow_html=True)
-        st.sidebar.markdown("""
-                <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -50px; margin-top: 5px; background-color: #;">
+with tab4:
+    # st.info("Página em revisão e desenvolvimento")
+    dados['Tempo'] = pd.to_datetime(dados['Tempo'], errors='coerce')
+
+    # Controle da animação
+    colc1, colc2 = st.columns([3,3])
+    with colc1:
+        st.markdown(custom_css,unsafe_allow_html=True)
+        st.markdown("""
+                <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -15px; margin-top: 0px; background-color: #;">
                     Nível bomba:
                 </div>""",    
                 unsafe_allow_html=True)
-        st.session_state.param_bomba = st.sidebar.number_input('-',min_value=0, max_value=255, label_visibility='hidden', key='ID6')
-
-        # st.sidebar.markdown(custom_css,unsafe_allow_html=True)
-        # st.sidebar.markdown("""
-        #         <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -65px; margin-top: 0px; background-color: #;">
-        #             Nível carga (Ohm):
-        #         </div>""",    
-        #         unsafe_allow_html=True)
-        # st.sidebar.markdown(custom_css,unsafe_allow_html=True)
-        # st.session_state.param_carga = st.sidebar.number_input('-',min_value=0, max_value=25, label_visibility='hidden', key='ID7')
-
-       
-        # Comando comunicação (ativar-desativar)
-
-        st.sidebar.markdown(custom_css,unsafe_allow_html=True)
-        st.sidebar.markdown("""
-                <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -5px; margin-top: -10px; background-color: #;">
-                    Enviar parâmetros
-                </div>""",    
-                unsafe_allow_html=True)
+        bombamax = 255
+        bomba = st.slider('-',min_value=0, max_value=bombamax, label_visibility='hidden')
         
-        st.sidebar.markdown(custom_css,unsafe_allow_html=True)
-        st.sidebar.button('Enviar',key='ID8',on_click=enviar_comando)
-
-
-        st.sidebar.markdown(custom_css,unsafe_allow_html=True)
-        st.sidebar.markdown("""
-                <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -20px; margin-top: -20px; background-color: #;">
-                    Ativar
+        st.markdown(custom_css,unsafe_allow_html=True)
+        st.markdown("""
+                <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -15px; margin-top: 0px; background-color: #;">
+                    Nível carga (Ohm):
                 </div>""",    
                 unsafe_allow_html=True)
+        cargamax = 100
+        carga = st.slider('-',min_value=0, max_value=cargamax, label_visibility='hidden', key='ID7')
+
+        ('---')
+
+    # Condições para exibição da velocidade e geração nos leds
+        if  bomba == 0: # Desligado
+            v_turbina = 0
+            n_led = 0
+        elif bomba <= (0.3 * bombamax):  # Até 30% da vazão - máx 2 leds
+            if carga == 0:
+                v_turbina = 1
+                n_led = 2
+            elif carga > (0.40 * cargamax): # Carga acima de 40%
+                v_turbina = 5 #parado
+                n_led = 0            
+            else:
+                v_turbina = 1
+                n_led = 1
+        elif bomba <= (0.5 * bombamax): # Até 50% da vazão - máx 4 leds
+            if carga <= (0.3 * cargamax):
+                v_turbina = 3
+                n_led = 4
+            elif carga <= (0.6 * cargamax):
+                v_turbina = 2
+                n_led = 3
+            elif carga <= (0.9 * cargamax):
+                v_turbina = 2
+                n_led = 2
+            else:
+                v_turbina = 1
+                n_led = 1
+        elif bomba <= (0.8 * bombamax): # Até 80% da vazão - máx 6 leds
+            if carga <= (0.3 * cargamax):
+                v_turbina = 4
+                n_led = 6
+            elif carga <= (0.5 * cargamax):
+                v_turbina = 3
+                n_led = 5
+            elif carga <= (0.7 * cargamax):
+                v_turbina = 3
+                n_led = 4
+            elif carga <= (0.85 * cargamax):
+                v_turbina = 2
+                n_led = 3
+            elif carga <= (0.95 * cargamax):
+                v_turbina = 2
+                n_led = 2               
+            else:
+                v_turbina = 2
+                n_led = 2
+        elif bomba <= (1 * bombamax): # Até 100% da vazão - máx 8 leds
+            if carga <= (0.3 * cargamax):
+                v_turbina = 4
+                n_led = 8
+            elif carga <= (0.50 * cargamax):
+                v_turbina = 3
+                n_led = 7
+            elif carga <= (0.70 * cargamax):
+                v_turbina = 2
+                n_led = 6
+            elif carga <= (0.85 * cargamax):
+                v_turbina = 2
+                n_led = 5
+            elif carga <= (0.95 * cargamax):
+                v_turbina = 2
+                n_led = 4
+            else:
+                v_turbina = 2
+                n_led = 3
+
+        #---------- Animação leds chamada ------------
+        st.markdown("""
+                <div style="font-size: 28px; font-weight: bold; color: green; margin-bottom: 0px; margin-top: 0px; background-color: #;">
+                    Potência em carga resistiva representada por LEDs
+                </div>""",    
+                unsafe_allow_html=True)
+
+        # Área da animação
+        plot_area = st.empty()
+
+        # Botão para iniciar a animação
+        for _ in range(50):
+            st.session_state.fig = desenhar_leds(n_led)
+            plot_area.plotly_chart(st.session_state.fig, use_container_width=True)
         
-        st.sidebar.markdown(custom_css,unsafe_allow_html=True)
-        st.sidebar.button('Ativar',key='ID9',on_click=iniciar_comunicação_serial)
 
-        st.sidebar.markdown(custom_css,unsafe_allow_html=True)
-        st.sidebar.markdown("""
-                <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -20px; margin-top: -20px; background-color: #;">
-                    Desativar
-                </div>""",    
-                unsafe_allow_html=True)
-        st.sidebar.markdown(custom_css,unsafe_allow_html=True)
-        st.sidebar.button('Desativar',key='ID10',on_click=parar_comunicação_serial)
+    #------- Bancada com efeito rotação da turbina ----------
+    with colc2:
+        colc21, colc22 = st.columns([2,8])
+        with colc21:
+            pass
+        with colc22:
+            st.session_state.velocidade_turbina = ["aplicativo/static/vel_del.gif",
+                                "aplicativo/static/vel_1.gif",
+                                "aplicativo/static/vel_2.gif",
+                                "aplicativo/static/vel_3.gif",
+                                "aplicativo/static/vel_4.gif",
+                                "aplicativo/static/vel_parado.gif"
+                                ]
+            st.image(st.session_state.velocidade_turbina[v_turbina])
+
+
+
+
+        # Usando CSS para garantir que o GIF não perca a animação
+        # st.markdown("""
+        #     <style>
+        #         .gif-container {
+        #             display: flex;
+        #             justify-content: flex-start;
+        #             padding-left: 50px;
+        #             padding-top: 20px;
+        #         }
+        #     </style>
+        #     <div class="gif-container">
+        #         <img src="aplicativo/static/""" + velocidade_turbina[v_turbina] + """ " width="300">
+        #     </div>
+        # """, unsafe_allow_html=True)
+
+
+
+#----------- Menu lateral: comandos para o arduino ----------------
+
+st.sidebar.markdown(custom_css,unsafe_allow_html=True)
+st.sidebar.markdown("""
+        <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -50px; margin-top: 5px; background-color: #;">
+            Nível bomba:
+        </div>""",    
+        unsafe_allow_html=True)
+st.session_state.param_bomba = st.sidebar.number_input('-',min_value=0, max_value=255, label_visibility='hidden', key='ID6')
+
+# st.sidebar.markdown(custom_css,unsafe_allow_html=True)
+# st.sidebar.markdown("""
+#         <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -65px; margin-top: 0px; background-color: #;">
+#             Nível carga (Ohm):
+#         </div>""",    
+#         unsafe_allow_html=True)
+# st.sidebar.markdown(custom_css,unsafe_allow_html=True)
+# st.session_state.param_carga = st.sidebar.number_input('-',min_value=0, max_value=25, label_visibility='hidden', key='ID7')
+
+st.sidebar.markdown(custom_css,unsafe_allow_html=True)
+st.sidebar.markdown("""
+        <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -5px; margin-top: -10px; background-color: #;">
+            Enviar parâmetros
+        </div>""",    
+        unsafe_allow_html=True)
+
+st.sidebar.markdown(custom_css,unsafe_allow_html=True)
+st.sidebar.button('Enviar',key='ID8',on_click=enviar_comando)
+
+
+#--------- Menu lateral: Funções de comunicação (ativar-desativar) -------------
+
+st.sidebar.markdown(custom_css,unsafe_allow_html=True)
+st.sidebar.markdown("""
+        <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -20px; margin-top: -20px; background-color: #;">
+            Ativar
+        </div>""",    
+        unsafe_allow_html=True)
+
+st.sidebar.markdown(custom_css,unsafe_allow_html=True)
+st.sidebar.button('Ativar',key='ID9',on_click=iniciar_comunicação_serial)
+
+st.sidebar.markdown(custom_css,unsafe_allow_html=True)
+st.sidebar.markdown("""
+        <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -20px; margin-top: -20px; background-color: #;">
+            Desativar
+        </div>""",    
+        unsafe_allow_html=True)
+st.sidebar.markdown(custom_css,unsafe_allow_html=True)
+st.sidebar.button('Desativar',key='ID10',on_click=parar_comunicação_serial)
 
 
             
@@ -884,4 +875,4 @@ elif pagina == 'Monitoramento e Análise':
 
 ################## FIM DO CÓDIGO#################
 # COPIE E COLE O CÓDIGO PARA INICIAR A INTERFACE
-# streamlit run simulador_web/tela_web/base.py
+# streamlit run aplicativo/base.py
