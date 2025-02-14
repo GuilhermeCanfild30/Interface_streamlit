@@ -474,7 +474,8 @@ with tab1:
             </div>
             """, 
             unsafe_allow_html=True
-        )   
+        ) 
+        st.markdown("<br>", unsafe_allow_html=True)  
     with coln12:
         #pass
         st.markdown(
@@ -488,6 +489,7 @@ with tab1:
             """, 
             unsafe_allow_html=True
         )
+        st.markdown("<br>", unsafe_allow_html=True)
     with coln13:
         st.markdown(
             f"""
@@ -500,6 +502,7 @@ with tab1:
             """, 
             unsafe_allow_html=True
         )
+        st.markdown("<br>", unsafe_allow_html=True)
     with coln14:
         # Criar uma estrutura personalizada
         st.markdown(
@@ -512,7 +515,8 @@ with tab1:
             </div>
             """, 
             unsafe_allow_html=True
-        ) 
+        )
+        st.markdown("<br>", unsafe_allow_html=True)
     with coln15:
         st.markdown(
             f"""
@@ -525,6 +529,7 @@ with tab1:
             """,    
             unsafe_allow_html=True
         )
+        st.markdown("<br>", unsafe_allow_html=True)
     # with coln36:
     #     st.markdown(
     #         f"""
