@@ -63,9 +63,6 @@ if 'last_modified' not in st.session_state:
 if 'fig' not in st.session_state:
     st.session_state.fig = None
 
-if 'velocidade_turbina' not in st.session_state:
-    st.session_state.velocidade_turbina = []
-
 if 'param_bomba' not in st.session_state:
     st.session_state.param_bomba = 0
 
@@ -794,14 +791,14 @@ with tab4:
         with colc21:
             pass
         with colc22:
-            st.session_state.velocidade_turbina = ["aplicativo/static/vel_del.gif",
+            velocidade_turbina = ["aplicativo/static/vel_del.gif",
                                 "aplicativo/static/vel_1.gif",
                                 "aplicativo/static/vel_2.gif",
                                 "aplicativo/static/vel_3.gif",
                                 "aplicativo/static/vel_4.gif",
                                 "aplicativo/static/vel_parado.gif"
                                 ]
-            st.image(st.session_state.velocidade_turbina[v_turbina])
+            st.image(velocidade_turbina[v_turbina])
 
 
 
