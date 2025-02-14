@@ -466,7 +466,7 @@ with tab1:
         # Criar uma estrutura personalizada
         st.markdown(
             f"""
-            <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: 5px; background-color: #f0f0f0;">
+            <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: 10px; background-color: #f0f0f0;">
                 Tensão [V]
             </div>
             <div style="font-size: 45px; font-weight: bold; color: green; padding: 10px; border-radius: 5px; background-color: #f0f0f0;">
@@ -479,7 +479,7 @@ with tab1:
         #pass
         st.markdown(
             f"""
-            <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: 5px; background-color: #f0f0f0;">
+            <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: 10px; background-color: #f0f0f0;">
                 Corrente [A]
             </div>
             <div style="font-size: 45px; font-weight: bold; color: green; padding: 10px; border-radius: 5px; background-color: #f0f0f0;">
@@ -491,7 +491,7 @@ with tab1:
     with coln13:
         st.markdown(
             f"""
-            <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: 5px; background-color: #f0f0f0;">
+            <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: 10px; background-color: #f0f0f0;">
                 Vazão [L/min]
             </div>
             <div style="font-size: 45px; font-weight: bold; color: green; padding: 10px; border-radius: 5px; background-color: #f0f0f0;">
@@ -504,7 +504,7 @@ with tab1:
         # Criar uma estrutura personalizada
         st.markdown(
             f"""
-            <div style="font-size: 23px; font-weight: normal; color: black; margin-bottom: 6px; background-color: #f0f0f0;">
+            <div style="font-size: 23px; font-weight: normal; color: black; margin-bottom: 10px; background-color: #f0f0f0;">
                 Velocidade [rpm]
             </div>
             <div style="font-size: 45px; font-weight: bold; color: green; padding: 10px; border-radius: 5px; background-color: #f0f0f0;">
@@ -516,7 +516,7 @@ with tab1:
     with coln15:
         st.markdown(
             f"""
-            <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: 5px; background-color: #f0f0f0;">
+            <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: 10px; background-color: #f0f0f0;">
                 Potência [VA]
             </div>
             <div style="font-size: 45px; font-weight: bold; color: green; padding: 10px; border-radius: 5px; background-color: #f0f0f0;">
