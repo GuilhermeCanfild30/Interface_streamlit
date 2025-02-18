@@ -63,7 +63,7 @@ python-dateutil==2.9.0.post0
 pytime==0.2.3
 pytz==2024.1
 pytz-deprecation-shim==0.1.0.post0
-pywin32==306
+pywin32==308; sys_platform == 'win32'
 pyxnat==1.6.3
 rdflib==6.3.2
 referencing==0.35.1
