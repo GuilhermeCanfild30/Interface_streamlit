@@ -404,13 +404,13 @@ div.stSlider > div > div > div > div > div {
 """
 
 
-#------------------ Interface ----------------------
+#------------------------------ Interface ----------------------------------
 
 # Atualização automática dos dados a cada 5 segundos
 st_autorefresh(interval=5000, limit=None, key="data_refresh")
 
 
-#----------- Menu lateral ---------------
+#------------------------- Menu lateral -------------------------------
 
 st.sidebar.image("aplicativo/static/simbol_ifsc.jpeg", width=60)
 st.sidebar.markdown("""
@@ -423,40 +423,96 @@ st.sidebar.markdown("""
 st.sidebar.markdown("[🔗 Baixe o repositório no GitHub](https://github.com/GuilhermeCanfild30/Interface_streamlit/tree/main)")
 
 
+# Certifique-se de que a coluna 'Timestamp' está no formato datetime
+dados['Tempo'] = pd.to_datetime(dados['Tempo'], errors='coerce')
+
+# Filtro de datas
+data_min = dados['Tempo'].min()
+data_max = dados['Tempo'].max()
+
+st.sidebar.markdown("""
+    <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -50px; margin-top: 5px; background-color: #;">
+        Selecione o período:
+    </div>""",    
+    unsafe_allow_html=True)
+# Widget para selecionar o intervalo de datas
+st.session_state.set_time = st.sidebar.date_input(
+    " ",
+    [data_min, data_max],
+    min_value=data_min.date(),
+    max_value=data_max.date(),
+)
+st.sidebar.markdown('---')
+
+# Filtrar os dados com base no intervalo de tempo
+if len(st.session_state.set_time) == 2:
+    inicio, fim = st.session_state.set_time
+    inicio = pd.to_datetime(inicio)  # Converter para datetime
+    fim = pd.to_datetime(fim) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)  # Incluir o fim do dia
+    dados_filtrados = dados[(dados['Tempo'] >= pd.to_datetime(inicio)) & (dados['Tempo'] <= pd.to_datetime(fim))]
+else:
+    dados_filtrados = dados
+
+#--------------- Menu lateral: comandos para o arduino --------------------
+
+st.sidebar.markdown(custom_css,unsafe_allow_html=True)
+st.sidebar.markdown("""
+        <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -50px; margin-top: -10px; background-color: #;">
+            Nível bomba:
+        </div>""",    
+        unsafe_allow_html=True)
+st.session_state.param_bomba = st.sidebar.number_input('-',min_value=0, max_value=255, label_visibility='hidden', key='ID6')
+
+# st.sidebar.markdown(custom_css,unsafe_allow_html=True)
+# st.sidebar.markdown("""
+#         <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -65px; margin-top: 0px; background-color: #;">
+#             Nível carga (Ohm):
+#         </div>""",    
+#         unsafe_allow_html=True)
+# st.sidebar.markdown(custom_css,unsafe_allow_html=True)
+# st.session_state.param_carga = st.sidebar.number_input('-',min_value=0, max_value=25, label_visibility='hidden', key='ID7')
+
+st.sidebar.markdown(custom_css,unsafe_allow_html=True)
+st.sidebar.markdown("""
+        <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -5px; margin-top: -10px; background-color: #;">
+            Enviar parâmetros
+        </div>""",    
+        unsafe_allow_html=True)
+
+st.sidebar.markdown(custom_css,unsafe_allow_html=True)
+st.sidebar.button('Enviar',key='ID8',on_click=enviar_comando)
+
+
+#--------- Menu lateral: Funções de comunicação (ativar-desativar) -------------
+
+st.sidebar.markdown(custom_css,unsafe_allow_html=True)
+st.sidebar.markdown("""
+        <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -20px; margin-top: -20px; background-color: #;">
+            Ativar
+        </div>""",    
+        unsafe_allow_html=True)
+
+st.sidebar.markdown(custom_css,unsafe_allow_html=True)
+st.sidebar.button('Ativar',key='ID9',on_click=iniciar_comunicação_serial)
+
+st.sidebar.markdown(custom_css,unsafe_allow_html=True)
+st.sidebar.markdown("""
+        <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -20px; margin-top: -20px; background-color: #;">
+            Desativar
+        </div>""",    
+        unsafe_allow_html=True)
+st.sidebar.markdown(custom_css,unsafe_allow_html=True)
+st.sidebar.button('Desativar',key='ID10',on_click=parar_comunicação_serial)
+
+
 #----------------- Abas principais da Interface -----------------
 
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Monitoramento", "📈 Comparativo", "📖 Tutorial", "🎴 Animação"])
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Monitoramento", "📈 Comparativo", "🎴 Animação", "📖 Tutorial"])
 
-with tab1:
-    
-    # Certifique-se de que a coluna 'Timestamp' está no formato datetime
-    dados['Tempo'] = pd.to_datetime(dados['Tempo'], errors='coerce')
-
-    # Filtro de datas
-    data_min = dados['Tempo'].min()
-    data_max = dados['Tempo'].max()
-
-    # Widget para selecionar o intervalo de datas
-    st.session_state.set_time = st.sidebar.date_input(
-        "Selecione o intervalo de tempo dos dados",
-        [data_min, data_max],
-        min_value=data_min.date(),
-        max_value=data_max.date(),
-    )
-
-    # Filtrar os dados com base no intervalo de tempo
-    if len(st.session_state.set_time) == 2:
-        inicio, fim = st.session_state.set_time
-        inicio = pd.to_datetime(inicio)  # Converter para datetime
-        fim = pd.to_datetime(fim) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)  # Incluir o fim do dia
-        dados_filtrados = dados[(dados['Tempo'] >= pd.to_datetime(inicio)) & (dados['Tempo'] <= pd.to_datetime(fim))]
-    else:
-        dados_filtrados = dados
-
+with tab1: # Monitoramento
 
 # Apresentação dos dados e análises
-    coln1 = st.columns(1)
-
+   
     # Estrutura personalizada de exibição
     coln11, coln12, coln13, coln14, coln15 = st.columns(5)
     with coln11:
@@ -474,7 +530,6 @@ with tab1:
         ) 
         st.markdown("<br>", unsafe_allow_html=True)  
     with coln12:
-        #pass
         st.markdown(
             f"""
             <div style="font-size: 24px; font-weight: normal; color: black; margin-bottom: 10px; background-color: #f0f0f0;">
@@ -566,7 +621,7 @@ with tab1:
         # Exibir o gráfico no Streamlit
         st.altair_chart(chart, use_container_width=False)
 
-    with col2:
+    with col2:     # Criação dos gráficos com biblioteca Altair
         # Criação do gráfico de Corrente
         chart = alt.Chart(dados_filtrados).mark_line().encode(
             x='Tempo',
@@ -591,7 +646,7 @@ with tab1:
         st.altair_chart(chart, use_container_width=False)
 
     col3, col4 = st.columns(2)
-    with col3:
+    with col3:    # Criação dos gráficos com biblioteca Altair
         # Criação do gráfico de Vazão
         chart = alt.Chart(dados_filtrados).mark_line().encode(
             x='Tempo',
@@ -615,7 +670,7 @@ with tab1:
         # Exibir o gráfico no Streamlit
         st.altair_chart(chart, use_container_width=False)
 
-    with col4:
+    with col4:    # Criação dos gráficos com biblioteca Altair
         # Criação do gráfico de RPM
         chart = alt.Chart(dados_filtrados).mark_line().encode(
             x='Tempo',
@@ -639,23 +694,25 @@ with tab1:
         # Exibir o gráfico no Streamlit
         st.altair_chart(chart, use_container_width=False)
 
-with tab2:
+with tab2: # Comparativo
     #Menu lateral gráfico comparativo
-        st.sidebar.markdown(f"""
+        st.markdown(f"""
                 <div style="font-size: 22px; font-weight: bold; color: green; margin-bottom: -10px; background-color: #;">                      Comparativo entre gráficos
                 </div>""", 
                 unsafe_allow_html=True)
-        st.sidebar.markdown(f"""
-                <div style="font-size: 23px; font-weight: normal; color: black; margin-bottom: -50px; background-color: #;">                      Eixo primário:
-                </div>""", 
-                unsafe_allow_html=True)      
-        eixo1 = st.sidebar.selectbox(label='-',options=['Corrente', 'Tensao', 'RPM', 'Fluxo'],index=None,placeholder="Escolha uma opção", label_visibility='hidden', key="ID4")
-
-        st.sidebar.markdown(f"""
-                <div style="font-size: 23px; font-weight: normal; color: black; margin-bottom: -50px; background-color: #;">                      Eixo secundário:
-                </div>""",
-                unsafe_allow_html=True)
-        eixo2 = st.sidebar.selectbox(label='-',options=['Corrente', 'Tensao', 'RPM', 'Fluxo'],index=None,placeholder="Escolha uma opção", label_visibility='hidden',key='ID5')
+        colt1, colt2 = st.columns(2)
+        with colt1:
+            st.markdown(f"""
+                    <div style="font-size: 23px; font-weight: normal; color: black; margin-bottom: -50px; background-color: #;">                      Eixo primário:
+                    </div>""", 
+                    unsafe_allow_html=True)      
+            eixo1 = st.selectbox(label='-',options=['Corrente', 'Tensao', 'RPM', 'Fluxo'],index=None,placeholder="Escolha uma opção", label_visibility='hidden', key="ID4")
+        with colt2:
+            st.markdown(f"""
+                    <div style="font-size: 23px; font-weight: normal; color: black; margin-bottom: -50px; background-color: #;">                      Eixo secundário:
+                    </div>""",
+                    unsafe_allow_html=True)
+            eixo2 = st.selectbox(label='-',options=['Corrente', 'Tensao', 'RPM', 'Fluxo'],index=None,placeholder="Escolha uma opção", label_visibility='hidden',key='ID5')
 
         #Inserção gráfico comparativo
         st.markdown("""
@@ -673,10 +730,7 @@ with tab2:
             st.session_state.fig = graf_plotly(dados_filtrados,eixo_x='Tempo', eixo_y1=eixo1, eixo_y2=eixo2,Tit_eixo1=eixo1,Tit_eixo2=eixo2)
             st.plotly_chart(st.session_state.fig, use_container_width=True)
 
-with tab3:
-    st.write("## Tutorial...")
-
-with tab4:
+with tab3: # Animação
     # st.info("Página em revisão e desenvolvimento")
     dados['Tempo'] = pd.to_datetime(dados['Tempo'], errors='coerce')
 
@@ -818,63 +872,42 @@ with tab4:
         #     </div>
         # """, unsafe_allow_html=True)
 
+with tab4: #Tutorial
+    import fitz  # PyMuPDF
 
 
-#----------- Menu lateral: comandos para o arduino ----------------
+    st.markdown("### Manual de uso da interface")
 
-st.sidebar.markdown(custom_css,unsafe_allow_html=True)
-st.sidebar.markdown("""
-        <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -50px; margin-top: 5px; background-color: #;">
-            Nível bomba:
-        </div>""",    
-        unsafe_allow_html=True)
-st.session_state.param_bomba = st.sidebar.number_input('-',min_value=0, max_value=255, label_visibility='hidden', key='ID6')
+    # Caminho do PDF salvo localmente
+    pdf_path = "aplicativo/docs/manual_interface.pdf"
 
-# st.sidebar.markdown(custom_css,unsafe_allow_html=True)
-# st.sidebar.markdown("""
-#         <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -65px; margin-top: 0px; background-color: #;">
-#             Nível carga (Ohm):
-#         </div>""",    
-#         unsafe_allow_html=True)
-# st.sidebar.markdown(custom_css,unsafe_allow_html=True)
-# st.session_state.param_carga = st.sidebar.number_input('-',min_value=0, max_value=25, label_visibility='hidden', key='ID7')
+   # Abrir o arquivo PDF
+    doc = fitz.open(pdf_path)
+    total_paginas = doc.page_count
 
-st.sidebar.markdown(custom_css,unsafe_allow_html=True)
-st.sidebar.markdown("""
-        <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -5px; margin-top: -10px; background-color: #;">
-            Enviar parâmetros
-        </div>""",    
-        unsafe_allow_html=True)
+    # Slider para selecionar a página
+    pagina_selecionada = st.number_input(
+    "📑 Digite o número da página:",
+    min_value=1,
+    max_value=total_paginas,
+    value=1,
+    step=1
+)
 
-st.sidebar.markdown(custom_css,unsafe_allow_html=True)
-st.sidebar.button('Enviar',key='ID8',on_click=enviar_comando)
+    # Reduzindo o tamanho com zoom
+    zoom = 1  # Diminui o tamanho da página (0.5 = 50% do tamanho original)
+    matriz_zoom = fitz.Matrix(zoom, zoom)
 
+    # Carregar e exibir a página selecionada com zoom reduzido
+    page = doc.load_page(pagina_selecionada - 1)
+    pix = page.get_pixmap(matrix=matriz_zoom)  # Aplica o zoom
+    img = pix.tobytes("ppm")
 
-#--------- Menu lateral: Funções de comunicação (ativar-desativar) -------------
+    st.image(img, caption=f"Página {pagina_selecionada} de {total_paginas}", use_column_width=True)
 
-st.sidebar.markdown(custom_css,unsafe_allow_html=True)
-st.sidebar.markdown("""
-        <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -20px; margin-top: -20px; background-color: #;">
-            Ativar
-        </div>""",    
-        unsafe_allow_html=True)
-
-st.sidebar.markdown(custom_css,unsafe_allow_html=True)
-st.sidebar.button('Ativar',key='ID9',on_click=iniciar_comunicação_serial)
-
-st.sidebar.markdown(custom_css,unsafe_allow_html=True)
-st.sidebar.markdown("""
-        <div style="font-size: 24px; font-weight: bold; color: green; margin-bottom: -20px; margin-top: -20px; background-color: #;">
-            Desativar
-        </div>""",    
-        unsafe_allow_html=True)
-st.sidebar.markdown(custom_css,unsafe_allow_html=True)
-st.sidebar.button('Desativar',key='ID10',on_click=parar_comunicação_serial)
 
 
             
-       
-
-################## FIM DO CÓDIGO#################
+#---------------- FIM DO CÓDIGO ------------------#
 # COPIE E COLE O CÓDIGO PARA INICIAR A INTERFACE
 # streamlit run aplicativo/base.py
