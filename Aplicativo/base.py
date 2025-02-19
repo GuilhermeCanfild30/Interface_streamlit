@@ -481,7 +481,7 @@ st.sidebar.markdown("""
 
 st.sidebar.markdown(custom_css,unsafe_allow_html=True)
 st.sidebar.button('Enviar',key='ID8',on_click=enviar_comando)
-
+st.sidebar.markdown('---')
 
 #--------- Menu lateral: Funções de comunicação (ativar-desativar) -------------
 
