@@ -9,8 +9,8 @@ https://youtu.be/7vzro6Z_dTE
 
 
 Manual de instruções para construção da bancada didática:
-- Estrutura (Listando medidas e materiais necessários)
-- Componentes eletrônicos (Lista de sensores e diagrama unifilar)
+- Estrutura (Listando medidas e materiais necessários) - elaborando
+- Componentes eletrônicos (Lista de sensores e diagrama unifilar) - elaborando
 - Softwares utilizados
   . VScode
   . Arduino IDE
