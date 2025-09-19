@@ -11,6 +11,7 @@ import serial.tools.list_ports
 import threading
 import numpy as np
 from streamlit_autorefresh import st_autorefresh
+import re
 
 
 # Configuração básica da página
@@ -212,41 +213,42 @@ def desenhar_leds(n_led, intensidade_base=0.8):
 
 
 def iniciar_comunicação_serial():
+    ports = None
     if st.session_state.get('ser') is None:
         ports = serial.tools.list_ports.comports()
-        available_ports = [port.device for port in ports]
+        #available_ports = [port.device for port in ports]
+        # Cria lista com nome da porta e descrição
+        available_ports = [f"{port.device} - {port.description}" for port in ports]
         print("Portas seriais disponíveis:", available_ports)
+        available_ports = [port.device for port in ports]
 
         if available_ports:  # Verifica se há portas disponíveis
-            port1 = available_ports[0]
-
-            # Verifica se a porta está disponível
-            if port1 not in available_ports or st.session_state.porta:
-                st.info("A porta já está aberta ou não está disponível.")
-                return
-
-            try:
-                st.session_state.ser = serial.Serial(port1, baudrate=9600, timeout=1)
-                st.session_state.porta = True  # Salva o estado da porta como fechado
-                st.session_state.thread_started = True # Sinal para iniciar thread
-                st.info(f"Conectado à porta {port1}")
-
-            except serial.SerialException as e:
-                st.error(f"Erro ao abrir a porta {port1}: {e}")
-                
+            for port in available_ports:
                 try:
-                    # Cria uma nova conexão serial na segunda tentativa
-                    st.session_state.ser = serial.Serial(port1, baudrate=9600, timeout=1)
+                    st.session_state.ser = serial.Serial(port, baudrate=9600, timeout=1)
                     st.session_state.porta = True
                     st.session_state.thread_started = True
-                    st.info(f"Conectado à porta {port1} na segunda tentativa")
+                    st.info(f"Conectado à porta {port}")
+                    return  # Sai do loop após conectar
 
-                except serial.SerialException as e2:
-                    st.error(f"Erro: A porta {port1} não foi encontrada ou está em uso: {e2}")
-        else:
-            st.error("Não há portas seriais disponíveis.")
-    else:
-        st.info("A porta já está aberta e funcional.")
+                except serial.SerialException as e:
+                    st.warning(f"Não foi possível conectar na porta {port}: {e}")
+                    # Tenta novamente uma vez
+    #                 try:
+    #                     st.session_state.ser = serial.Serial(port, baudrate=9600, timeout=1)
+    #                     st.session_state.porta = True
+    #                     st.session_state.thread_started = True
+    #                     st.info(f"Conectado à porta {port} na segunda tentativa")
+    #                     return
+    #                 except serial.SerialException as e2:
+    #                     st.error(f"Erro: Porta {port} não disponível: {e2}")
+            
+    #         # Se terminou o loop sem conseguir
+    #         st.error("Nenhuma porta pôde ser aberta.")
+    #     else:
+    #         st.error("Não há portas seriais disponíveis.")
+    # else:
+    #     st.info("A porta já está aberta e funcional.")
 
 
 def parar_comunicação_serial():
@@ -287,51 +289,46 @@ def comunicar_serial(ser, csv_file, porta, estado_thread):
     # Esta verificação impede que o código de comunicação continue caso ser seja None. Se ser for None, significa que a porta serial não foi inicializada ou que foi fechada anteriormente (por exemplo, ao chamar parar_comunicação_serial()).
     if ser is None or not ser.is_open:
         return
-    
+
+    # Regex para validar linha completa
+    pattern = re.compile(
+        r"^CORRENTE:\s*([\d\.]+)A\s*\|\s*TENSÃO:\s*([\d\.]+)V\s*\|\s*ROTAÇÃO:\s*(\d+)RPM\s*\|\s*VAZÃO:\s*([\d\.]+)l/min$"
+    )
+
     try:
         while ser.is_open and porta and estado_thread:
             try:
                 if ser.in_waiting > 0:
                     data = ser.readline().decode('utf-8', errors='ignore').strip()
-                    ser.reset_input_buffer()
-                    if not "CORRENTE:" in data or "VAZÃO:" not in  data or "ROTAÇÃO:" not in data or "TENSÃO:" not in data:
-                        print(f"Dado inválido recebido: {data}")  # Adiciona esta linha para depuração                    
-                    
-                    if "CORRENTE:" in data and "VAZÃO:" in data and "ROTAÇÃO:" in data and "TENSÃO:" in data:
+
+                    # Ignora linhas vazias ou curtas
+                    if not data or len(data) < 10:
+                        continue  
+
+                    match = pattern.match(data)
+                    if match:
+                        corrente = float(match.group(1))
+                        tensao = float(match.group(2))
+                        rpm = int(match.group(3))
+                        fluxo = float(match.group(4))
+
+                        current_time = datetime.datetime.now()
+
+                        with open(csv_file, 'a', newline='') as file:
+                            writer = csv.writer(file)
+                            writer.writerow([current_time, fluxo, rpm, corrente, tensao])
+
                         print(f"Dados salvos: {data}")
-                        parts = data.split(" | ")  # Divide a linha pelos delimitadores " | "
-                        if len(parts) == 4:  # Verifica se temos exatamente 4 partes
-                            corrente_str = parts[0].split(":")[1].strip()
-                            tensao_str = parts[1].split(":")[1].strip()
-                            rpm_str = parts[2].split(":")[1].strip()
-                            fluxo_str = parts[3].split(":")[1].strip()
+                    else:
+                        print(f"Dado inválido recebido: {data}")
 
-                            try:
-                                fluxo = float(fluxo_str.replace("l/min", "").strip())
-                                rpm = int(rpm_str.replace("RPM", "").strip())
-                                corrente = float(corrente_str.replace("A", "").strip())
-                                tensao = float(tensao_str.replace("V", "").strip())
-
-                                current_time = datetime.datetime.now()
-
-                                # Atualizar o arquivo CSV
-                                with open(csv_file, 'a', newline='') as file:
-                                    writer = csv.writer(file)
-                                    writer.writerow([current_time, fluxo, rpm, corrente, tensao])
-
-                                # ser.reset_input_buffer()
-                            except ValueError as ve:
-                                print(f"Erro ao converter dados: {ve}")
-                                ser.reset_input_buffer()
-                                continue  # Ignora a linha com dados inválidos        
-                            
             except Exception as e:
                 print(f"Erro com a conexão serial: {e}")
                 ser = None
                 estado_thread = False
                 porta = False
 
-            time.sleep(1)  # Pausa entre as leituras
+            time.sleep(1)  # leitura mais responsiva
     except Exception as e:
         print(f"Encerrando Thread: {e}")
 

@@ -58,19 +58,21 @@ void loop() {
   lerFluxo();
 
   // Imprime todas as leituras ao mesmo tempo
-  Serial.print("CORRENTE:");
-  Serial.print(valor_corrente);
-  Serial.print("A | ");
-  Serial.print("TENSÃO:");
-  Serial.print(valor_tensao, 0);
-  Serial.print("V | ");
-  Serial.print("ROTAÇÃO:");
-  Serial.print(rpm, DEC);
-  Serial.print("RPM | ");
-  Serial.print("VAZÃO:");
-  Serial.print(vazao);
-  // Serial.print(velocidade_bomba); //Apenas para testar retorno de dado na interface
-  Serial.println(" l/min");
+Serial.print("CORRENTE:");
+Serial.print(valor_corrente, 2);
+Serial.print("A | ");
+
+Serial.print("TENSÃO:");
+Serial.print(valor_tensao, 0);
+Serial.print("V | ");
+
+Serial.print("ROTAÇÃO:");
+Serial.print(rpm);
+Serial.print("RPM | ");
+
+Serial.print("VAZÃO:");
+Serial.print(vazao, 2);
+Serial.println("l/min");
 
   delay(2000);
 }
